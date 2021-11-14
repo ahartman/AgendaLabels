@@ -15,19 +15,18 @@ struct ContentView: View {
 
     @ViewBuilder
     var body: some View {
-      #if os(iOS)
-      if horizontalSizeClass == .compact {
-        ContentViewTabbar()  // For iPhone
-      }
-      else {
-        ContentViewSidebar()  // For iPad
-      }
-      #else
-      ContentViewSidebar()  // For Mac
-        .frame(minWidth: 2000, maxWidth: .infinity, minHeight: 500, maxHeight: .infinity)
-      #endif
+        #if os(iOS)
+        if horizontalSizeClass == .compact {
+            ContentViewTabbar() // For iPhone
+        }
+        else {
+            ContentViewSidebar() // For iPad
+        }
+        #else
+        ContentViewSidebar() // For Mac
+            .frame(minWidth: 2000, maxWidth: .infinity, minHeight: 500, maxHeight: .infinity)
+        #endif
     }
-
 }
 
 struct ContentView_Previews: PreviewProvider {

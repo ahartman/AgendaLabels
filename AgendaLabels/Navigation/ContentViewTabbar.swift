@@ -12,7 +12,7 @@ struct ContentViewTabbar: View {
     var body: some View {
         TabView {
             LabelsView()
-                .tabItem{
+                .tabItem {
                     Image(systemName: "gearshape")
                     Text("Labels")
                 }

@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct ContentViewSidebar: View {
-     var body: some View {
+    var body: some View {
         NavigationView {
             List {
                 NavigationLink(destination: LabelsView()) {

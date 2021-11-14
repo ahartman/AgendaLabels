@@ -7,16 +7,6 @@
 //
 
 import Foundation
-
-//
-//  EventsRepository.swift
-//  EventKit.Example
-//
-//  Created by Filip Němeček on 31/07/2020.
-//  Copyright © 2020 Filip Němeček. All rights reserved.
-//
-
-import Foundation
 import EventKit
 import Combine
 
@@ -29,7 +19,7 @@ class LabelsModel {
     var endCalendar: Date
 
     var labelCalendars = [String : EKCalendar]()
-    let labelNumbers = ["nrOfWeeks": 8, "nrPerWeek" : 25, "nrPerDay": 7]
+    let labelNumbers = ["nrOfWeeks": 8, "nrPerWeek" : 30, "nrPerDay": 7]
     var labelDayCounts = [Date : Int]()
     var labelWeekCounts = [Date : Int]()
 
@@ -81,6 +71,7 @@ class LabelsModel {
             }
         })
         group.wait()
+        
         dayLabels = doDayCounts(sessions: sessions!)
         weekLabels = doWeekCounts(sessions: sessions!)
 
@@ -98,8 +89,10 @@ class LabelsModel {
 
     private func getLabelEvents(completion: @escaping (([EKEvent]?, [EKEvent]?) -> Void)) {
         requestAccess(onGranted: {
-            let predicate1 = self.eventStore.predicateForEvents(withStart: self.startCalendar, end: self.endCalendar, calendars: [self.labelCalendars["Marieke"]!, self.labelCalendars["Marieke blokkeren"]!])
+            let oldLabelStartDate = self.calendar.date(byAdding: DateComponents(day: -7), to: self.startCalendar)!
+            let predicate1 = self.eventStore.predicateForEvents(withStart: oldLabelStartDate, end: self.endCalendar, calendars: [self.labelCalendars["Marieke"]!, self.labelCalendars["Marieke blokkeren"]!])
             let labels1 = self.eventStore.events(matching: predicate1).filter({$0.isAllDay == true})
+
             let predicate2 = self.eventStore.predicateForEvents(withStart: self.startCalendar, end: self.endCalendar, calendars: [self.labelCalendars["Marieke"]!])
             let sessions1 = self.eventStore.events(matching: predicate2).filter {$0.isAllDay == false}
             completion(sessions1, labels1)
@@ -140,6 +133,7 @@ class LabelsModel {
         var datum = startCalendar
         var tempLabels = [EKEvent]()
         var weekCounts = [Int]()
+        var weekNewCounts = [Int]()
         var weekDates = [Date]()
         while datum < endCalendar {
             let datumWeek = calendar.component(.weekOfYear, from: datum)
@@ -147,17 +141,25 @@ class LabelsModel {
                 let labelWeek = calendar.component(.weekOfYear, from: $0.startDate)
                 return datumWeek == labelWeek
             }).count
+            let labelWeekNewCount = sessions.filter({
+                let labelWeek = calendar.component(.weekOfYear, from: $0.startDate)
+                return datumWeek == labelWeek && $0.title.contains("#")
+            }).count
             weekCounts.append(labelWeekCount)
+            weekNewCounts.append(labelWeekNewCount)
             weekDates.append(datum)
             datum = calendar.date(byAdding: DateComponents(day: 7), to: datum)!
         }
+
         var weekLabels = weekCounts.map({String($0)})
+        let weekNewLabels = weekNewCounts.map({String($0)})
+
         for (index, week) in weekCounts.enumerated() {
             let event = EKEvent(eventStore: eventStore)
             event.startDate = weekDates[index]
             event.endDate = calendar.date(byAdding: DateComponents(day: 7), to: event.startDate)!
             event.isAllDay = true
-            event.title = "Week \(weekLabels.joined(separator: ", "))"
+            event.title = "Week \(weekLabels.joined(separator: ", "))" + " (\(weekNewLabels[index])#)"
             if week > labelNumbers["nrPerWeek"]! {
                 event.calendar = labelCalendars["Marieke"]
             } else {
