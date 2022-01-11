@@ -12,10 +12,10 @@ import SwiftUI
 struct AgendaLabelsApp: App {
     init() {
         Task {
-            await LabelsModelAsync().doLabels()
+            await LabelsModel().doLabels()
             print("exiting")
             exit(1)
-        }
+       }
     }
 
     var body: some Scene {

@@ -12,7 +12,7 @@ import Foundation
 
 typealias Action = () -> Void
 
-class LabelsModelAsync {
+class LabelsModel {
     var selectedCalendarsSet: Set<EKCalendar>?
     var events: [EKEvent]?
     var startCalendar: Date

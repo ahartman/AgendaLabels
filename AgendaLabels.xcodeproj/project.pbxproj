@@ -31,7 +31,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		DCB88F5724D47D7500400853 /* Agenda Labels.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Agenda Labels.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DCB88F5724D47D7500400853 /* AgendaLabels.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgendaLabels.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCB88F5E24D47D7500400853 /* ContentViewTabbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewTabbar.swift; sourceTree = "<group>"; };
 		DCB88F6024D47D7700400853 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DCB88F6324D47D7700400853 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -69,7 +69,7 @@
 		DCB88F5824D47D7500400853 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				DCB88F5724D47D7500400853 /* Agenda Labels.app */,
+				DCB88F5724D47D7500400853 /* AgendaLabels.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -134,7 +134,7 @@
 			);
 			name = AgendaLabels;
 			productName = EventKit.Example;
-			productReference = DCB88F5724D47D7500400853 /* Agenda Labels.app */;
+			productReference = DCB88F5724D47D7500400853 /* AgendaLabels.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -336,7 +336,7 @@
 				);
 				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ahartman.AgendaLabels;
-				PRODUCT_NAME = "Agenda Labels";
+				PRODUCT_NAME = AgendaLabels;
 				SUPPORTS_MACCATALYST = YES;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_VERSION = 5.0;
@@ -362,7 +362,7 @@
 				);
 				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ahartman.AgendaLabels;
-				PRODUCT_NAME = "Agenda Labels";
+				PRODUCT_NAME = AgendaLabels;
 				SUPPORTS_MACCATALYST = YES;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_VERSION = 5.0;

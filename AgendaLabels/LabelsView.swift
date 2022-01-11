@@ -10,11 +10,16 @@ import SwiftUI
 
 struct LabelsView: View {
     var body: some View {
-        Button(action: LabelsModel().doLabels) {
+        Button(action: {
+            Task {
+                await LabelsModel().doLabels()
+            }
+        }, label: {
             HStack {
                 Text("Labels")
-                    Image(systemName: "arrow.up.circle")
-            }}
+                Image(systemName: "arrow.up.circle")
+            }
+        })
     }
 }
 
