@@ -22,9 +22,3 @@ struct LabelsView: View {
         })
     }
 }
-
-struct LabelsView_Previews: PreviewProvider {
-    static var previews: some View {
-        LabelsView()
-    }
-}

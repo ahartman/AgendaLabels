@@ -63,21 +63,13 @@ class LabelsModel {
         let weekLabels = doWeekLabels(sessions: sessions, newSessions: newSessions, proposedSessions: proposedSessions)
         let newLabels = doWeekProposedLabels(newSessions: newSessions, proposedSessions: proposedSessions)
         let dayLabels = doDayLabels(sessions: sessions, newSessions: newSessions, proposedSessions: proposedSessions)
-        let oldStuff = oldLabels + oldEvents
 
-        for event in oldStuff {
+        for event in oldLabels + oldEvents {
             try? eventStore.remove(event, span: .thisEvent)
         }
-        for event in weekLabels! {
+        for event in weekLabels + newLabels + dayLabels {
             try? eventStore.save(event, span: .thisEvent)
         }
-        for event in dayLabels! {
-            try? eventStore.save(event, span: .thisEvent)
-        }
-        for event in newLabels {
-            try? eventStore.save(event!, span: .thisEvent)
-        }
-
         try? eventStore.commit()
     }
 
@@ -141,7 +133,7 @@ class LabelsModel {
         return (sessions, newSessions, proposals, oldLabels, oldSessions)
     }
 
-    func doWeekLabels(sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent]? {
+    func doWeekLabels(sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent] {
         var datum = startCalendar
         var tempLabels = [EKEvent]()
 
@@ -192,7 +184,7 @@ class LabelsModel {
         return tempLabels
     }
 
-    func doDayLabels(sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent]? {
+    func doDayLabels(sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent] {
         var datum = startCalendar
         var localLabels = [EKEvent]()
 
@@ -217,15 +209,11 @@ class LabelsModel {
                 event.calendar = labelCalendars["Marieke blokkeren"]
             }
             if labelDayNewCount > 0 {
-                event.title = "\(event.title!) #"
-                event.calendar = labelCalendars["Marieke speciallekes"]
-            }
-            if labelDayNewCount > 0 {
-                event.title = "Nieuwe #"
-                event.calendar = labelCalendars["Marieke speciallekes"]
-            } else if labelDayProposedcount > 0 {
-                event.title = "Voorstel #"
-                event.calendar = labelCalendars["Marieke speciallekes"]
+                event.title = "\(event.title!) N#"
+                if labelDayCount == 0 {event.calendar = labelCalendars["Marieke blokkeren"]}
+             } else if labelDayProposedcount > 0 {
+                event.title = "\(event.title!) V#"
+                if labelDayCount == 0 {event.calendar = labelCalendars["Marieke blokkeren"]}
             }
             localLabels.append(event)
             datum = calendar.date(byAdding: DateComponents(day: 1), to: datum)!
@@ -233,7 +221,7 @@ class LabelsModel {
         return localLabels
     }
 
-    func doWeekProposedLabels(newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent?] {
+    func doWeekProposedLabels(newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent] {
         var datum = startCalendar
         var localLabels = [EKEvent]()
         var weekNewCounts = [Int]()
