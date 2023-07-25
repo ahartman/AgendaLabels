@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>AppleScript uitvoeren</string>
+	<key>com.apple.security.app-sandbox</key>
+	<string>false</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>a.hartman@telenet.be</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -50,6 +58,10 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>com.apple.security.temporary-exception.apple-events</key>
+	<array>
+	    <string>com.apple.Mail</string>
 	</array>
 </dict>
 </plist>

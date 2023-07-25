@@ -7,10 +7,12 @@
 //
 
 import EventKit
+import Foundation
+import SwiftUI
 import UserNotifications
 
 class LabelsModel {
-    let labelNumbers = ["nrOfWeeks": 52, "nrPerWeek": 25, "nrPerDay": 6, "minimumPatients": 5]
+    let labelNumbers = ["nrOfWeeks": 52, "nrPerWeek": 25, "nrPerDay": 6, "minimumPerWeek": 5]
 
     let startCalendar: Date
     var endCalendar: Date
@@ -25,15 +27,19 @@ class LabelsModel {
         startCalendar = calendar.nextDate(after: Date(), matching: monday, matchingPolicy: .nextTime, direction: .backward)!
         let dayComp = DateComponents(day: 7 * labelNumbers["nrOfWeeks"]!)
         endCalendar = calendar.date(byAdding: dayComp, to: startCalendar)!
+
         let calendars = eventStore.calendars(for: .event).filter { $0.title.contains("Marieke") }
         for calendar in calendars { labelCalendars[calendar.title] = calendar }
+
         dateFormatter.dateFormat = "d/M/yyyy"
+
         if defaults.object(forKey: "today") == nil {
             defaults.set(Date(), forKey: "today")
         }
     }
 
     public func doLabels() async {
+        var verwijderd = 0
         Task {
             do {
                 let authorization = try await requestEventStoreAuthorization()
@@ -47,16 +53,19 @@ class LabelsModel {
 
         // handle expired first
         if !calendar.isDateInToday(defaults.object(forKey: "today") as! Date) {
-            defaults.set(Date(), forKey: "today")
-            let expiredSessions = getProposedEvents()
-            let moveEvents = moveExpiredSessions(sessions: expiredSessions)
-            print("Verwijderd: \(moveEvents.count)")
-            if moveEvents.count > 0 {
-                showNotification(count: moveEvents.count)
+            var proposedSessions = [EKEvent]()
+            func getProposedEvents() {
+                let proposedSessionsPredicate = eventStore.predicateForEvents(withStart: startCalendar, end: endCalendar, calendars: [labelCalendars["Marieke speciallekes"]!])
+                proposedSessions = eventStore.events(matching: proposedSessionsPredicate).filter { $0.isAllDay == false && $0.title.contains("#") }
             }
-            for event in moveEvents {
+
+            getProposedEvents()
+            let toMoveEvents = moveExpiredSessions(sessions: proposedSessions)
+            verwijderd = toMoveEvents.count
+            for event in toMoveEvents {
                 try? eventStore.save(event, span: .thisEvent)
             }
+            try? eventStore.commit()
         }
 
         let (sessions, newSessions, proposedSessions, oldLabels, oldEvents) = getLabelEvents()
@@ -71,12 +80,12 @@ class LabelsModel {
             try? eventStore.save(event, span: .thisEvent)
         }
         try? eventStore.commit()
-    }
 
-    func getProposedEvents() -> [EKEvent] {
-        let proposedSessionsPredicate = eventStore.predicateForEvents(withStart: startCalendar, end: endCalendar, calendars: [labelCalendars["Marieke speciallekes"]!])
-        let proposedSessions = eventStore.events(matching: proposedSessionsPredicate).filter { $0.isAllDay == false && $0.title.contains("#") }
-        return (proposedSessions)
+        if !calendar.isDateInToday(defaults.object(forKey: "today") as! Date) {
+            showNotification(nieuwe: newSessions.count, voorstellen: proposedSessions.count/2, verwijderd: verwijderd/2)
+            sendMail(nieuwe: newSessions.count, voorstellen: proposedSessions.count/2, verwijderd: verwijderd/2)
+            defaults.set(Date(), forKey: "today")
+        }
     }
 
     func moveExpiredSessions(sessions: [EKEvent]) -> [EKEvent] {
@@ -86,7 +95,7 @@ class LabelsModel {
                 let year = calendar.dateComponents([.year], from: session.creationDate!).year!
                 if let date = dateFormatter.date(from: location + "/\(year)") {
                     let numberOfDays = Calendar.current.dateComponents([.day], from: date, to: Date()).day!
-                    if numberOfDays > 14 {
+                    if numberOfDays > 7 {
                         session.calendar = labelCalendars["Marieke blokkeren"]
                         localSessions.append(session)
                     }
@@ -96,19 +105,54 @@ class LabelsModel {
         return localSessions
     }
 
-    func showNotification(count: Int) {
+    func showNotification(nieuwe: Int, voorstellen: Int, verwijderd: Int) {
         let center = UNUserNotificationCenter.current()
-        let tekst = count == 1 ? "voorstel" : "voorstellen"
+        let tekstVoorstellen = voorstellen == 1 ? "voorstel" : "voorstellen"
+        let tekstVerwijderd = verwijderd == 1 ? "voorstel" : "voorstellen"
+
         let content = UNMutableNotificationContent()
         content.title = "Agenda Labels"
-        content.body = "\(count) \(tekst) verouderd."
+        content.body = "\(nieuwe) nieuwe, \(voorstellen) \(tekstVoorstellen).\n\(verwijderd) \(tekstVerwijderd) verouderd."
+        print(content.body)
         content.sound = UNNotificationSound.default
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60.0, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5.0, repeats: false)
         let request = UNNotificationRequest(identifier: "Identifier", content: content, trigger: trigger)
         center.add(request) { error in
             if let error = error {
                 print("Notificatie fout: \(error)")
+            }
+        }
+    }
+
+    func sendMail(nieuwe: Int, voorstellen: Int, verwijderd: Int) {
+        let component = Calendar.current.component(.weekday, from: Date())
+        if component == 1 || component == 7 { return }
+
+        let tekstConsultaties = nieuwe == 1 ? "nieuwe consultatie" : "nieuwe consultaties"
+        let tekstVoorstellen = voorstellen == 1 ? "voorgestelde consultatie" : "voorgestelde consultaties"
+        let tekstVerwijderd = verwijderd == 1 ? "verouderd voorstel" : "verouderde voorstellen"
+        let tekst = "\(nieuwe) \(tekstConsultaties).\n\(voorstellen) \(tekstVoorstellen).\n\(verwijderd) \(tekstVerwijderd) verwijderd."
+
+        let myAppleScript = """
+            tell application "Mail"
+            set theTos to {"a.hartman@telenet.be"}
+            set theMessage to make new outgoing message with properties {sender:"a.hartman@telenet.be", subject:"Marieke Agenda", content:"\(tekst)", visible:false}
+                tell theMessage
+                    repeat with theTo in theTos
+                        make new recipient at end of to recipients with properties {address:theTo}
+                    end repeat
+                end tell
+                send theMessage
+            end tell
+        """
+
+        var error: NSDictionary?
+        if let scriptObject = NSAppleScript(source: myAppleScript) {
+            if let outputString = scriptObject.executeAndReturnError(&error).stringValue {
+                print(outputString)
+            } else if error != nil {
+                print("error: ", error!)
             }
         }
     }
@@ -135,7 +179,7 @@ class LabelsModel {
 
     func doWeekLabels(sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent] {
         var datum = startCalendar
-        var tempLabels = [EKEvent]()
+        var localLabels = [EKEvent]()
 
         var weekCounts = [Int]()
         var weekNewCounts = [Int]()
@@ -161,7 +205,7 @@ class LabelsModel {
             datum = calendar.date(byAdding: DateComponents(day: 7), to: datum)!
         }
 
-        let lastIndex = weekCounts.lastIndex(where: { $0 > labelNumbers["minimumPatients"]! })
+        let lastIndex = weekCounts.lastIndex(where: { $0 > labelNumbers["minimumPerWeek"]! })
         weekCounts = Array(weekCounts[...lastIndex!])
         endCalendar = calendar.date(byAdding: DateComponents(day: 7), to: weekDates[lastIndex!])!
 
@@ -177,11 +221,11 @@ class LabelsModel {
             } else {
                 event.calendar = labelCalendars["Marieke blokkeren"]
             }
-            tempLabels.append(event)
+            localLabels.append(event)
 
             weekLabels = Array(weekLabels.dropFirst())
         }
-        return tempLabels
+        return localLabels
     }
 
     func doDayLabels(sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent] {
@@ -210,10 +254,10 @@ class LabelsModel {
             }
             if labelDayNewCount > 0 {
                 event.title = "\(event.title!) N#"
-                if labelDayCount == 0 {event.calendar = labelCalendars["Marieke blokkeren"]}
-             } else if labelDayProposedcount > 0 {
+                if labelDayCount == 0 { event.calendar = labelCalendars["Marieke blokkeren"] }
+            } else if labelDayProposedcount > 0 {
                 event.title = "\(event.title!) V#"
-                if labelDayCount == 0 {event.calendar = labelCalendars["Marieke blokkeren"]}
+                if labelDayCount == 0 { event.calendar = labelCalendars["Marieke blokkeren"] }
             }
             localLabels.append(event)
             datum = calendar.date(byAdding: DateComponents(day: 1), to: datum)!

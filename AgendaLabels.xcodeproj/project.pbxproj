@@ -133,6 +133,8 @@
 			dependencies = (
 			);
 			name = AgendaLabels;
+			packageProductDependencies = (
+			);
 			productName = EventKit.Example;
 			productReference = DCB88F5724D47D7500400853 /* AgendaLabels.app */;
 			productType = "com.apple.product-type.application";
@@ -162,6 +164,8 @@
 				nl,
 			);
 			mainGroup = DCB88F4E24D47D7500400853;
+			packageReferences = (
+			);
 			productRefGroup = DCB88F5824D47D7500400853 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -327,6 +331,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"AgendaLabels/Preview Content\"";
 				DEVELOPMENT_TEAM = V2LV7426WZ;
+				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = AgendaLabels/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -354,6 +359,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"AgendaLabels/Preview Content\"";
 				DEVELOPMENT_TEAM = V2LV7426WZ;
+				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = AgendaLabels/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
