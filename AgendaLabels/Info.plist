@@ -33,7 +33,7 @@
 	<key>NSCalendarsUsageDescription</key>
 	<string>To access your calendars.</string>
 	<key>NSContactsUsageDescription</key>
-	<string>To access shared calendars and invites.</string>
+	<string>To access contacts.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -61,7 +61,7 @@
 	</array>
 	<key>com.apple.security.temporary-exception.apple-events</key>
 	<array>
-	    <string>com.apple.Mail</string>
+		<string>com.apple.Mail</string>
 	</array>
 </dict>
 </plist>

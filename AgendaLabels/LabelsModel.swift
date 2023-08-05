@@ -5,17 +5,15 @@
 //  Created by André Hartman on 18/12/2020.
 //  Copyright © 2020 André Hartman. All rights reserved.
 //
-
 import EventKit
-import Foundation
-import SwiftUI
 import UserNotifications
 
 class LabelsModel {
-    let labelNumbers = ["nrOfWeeks": 52, "nrPerWeek": 25, "nrPerDay": 6, "minimumPerWeek": 5]
+    let labelNumbers = ["nrOfWeeks": 26, "nrPerWeek": 25, "nrPerDay": 6, "minimumPerWeek": 5]
 
     let startCalendar: Date
     var endCalendar: Date
+    var endWeeklyCalendar: Date
     var labelCalendars = [String: EKCalendar]()
     let eventStore = EKEventStore()
     let calendar = Calendar.current
@@ -25,8 +23,9 @@ class LabelsModel {
     init() {
         let monday = DateComponents(hour: 0, minute: 0, second: 0, weekday: 2)
         startCalendar = calendar.nextDate(after: Date(), matching: monday, matchingPolicy: .nextTime, direction: .backward)!
-        let dayComp = DateComponents(day: 7 * labelNumbers["nrOfWeeks"]!)
+        let dayComp = DateComponents(day: 7)
         endCalendar = calendar.date(byAdding: dayComp, to: startCalendar)!
+        endWeeklyCalendar = endCalendar
 
         let calendars = eventStore.calendars(for: .event).filter { $0.title.contains("Marieke") }
         for calendar in calendars { labelCalendars[calendar.title] = calendar }
@@ -60,9 +59,10 @@ class LabelsModel {
             }
 
             getProposedEvents()
-            let toMoveEvents = moveExpiredSessions(sessions: proposedSessions)
-            verwijderd = toMoveEvents.count
-            for event in toMoveEvents {
+            let toMoveSessions = moveExpiredSessions(sessions: proposedSessions)
+            verwijderd = toMoveSessions.count
+            for event in toMoveSessions {
+                print(event)
                 try? eventStore.save(event, span: .thisEvent)
             }
             try? eventStore.commit()
@@ -126,7 +126,7 @@ class LabelsModel {
     }
 
     func sendMail(nieuwe: Int, voorstellen: Int, verwijderd: Int) {
-        let component = Calendar.current.component(.weekday, from: Date())
+        let component = calendar.component(.weekday, from: Date())
         if component == 1 || component == 7 { return }
 
         let tekstConsultaties = nieuwe == 1 ? "nieuwe consultatie" : "nieuwe consultaties"
@@ -169,12 +169,12 @@ class LabelsModel {
         let newSessions = eventStore.events(matching: newSessionsPredicate).filter { $0.isAllDay == false && $0.title.contains("#") }
 
         let proposedSessionsPredicate = eventStore.predicateForEvents(withStart: startCalendar, end: endCalendar, calendars: [labelCalendars["Marieke speciallekes"]!])
-        let proposals = eventStore.events(matching: proposedSessionsPredicate).filter { $0.isAllDay == false && $0.title.contains("#") }
+        let proposedSessions = eventStore.events(matching: proposedSessionsPredicate).filter { $0.isAllDay == false && $0.title.contains("#") }
 
         let oldSessionsPredicate = eventStore.predicateForEvents(withStart: startCalendar, end: Date(), calendars: [labelCalendars["Marieke speciallekes"]!, labelCalendars["Marieke blokkeren"]!])
         let oldSessions = eventStore.events(matching: oldSessionsPredicate).filter { $0.isAllDay == false && $0.title.contains("#") }
 
-        return (sessions, newSessions, proposals, oldLabels, oldSessions)
+        return (sessions, newSessions, proposedSessions, oldLabels, oldSessions)
     }
 
     func doWeekLabels(sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent] {
@@ -192,7 +192,6 @@ class LabelsModel {
                 let labelWeek = calendar.component(.weekOfYear, from: $0.startDate)
                 return datumWeek == labelWeek
             }.count)
-
             weekNewCounts.append(newSessions.filter {
                 let labelWeek = calendar.component(.weekOfYear, from: $0.startDate)
                 return datumWeek == labelWeek && $0.title.contains("#")
@@ -208,6 +207,7 @@ class LabelsModel {
         let lastIndex = weekCounts.lastIndex(where: { $0 > labelNumbers["minimumPerWeek"]! })
         weekCounts = Array(weekCounts[...lastIndex!])
         endCalendar = calendar.date(byAdding: DateComponents(day: 7), to: weekDates[lastIndex!])!
+        endWeeklyCalendar = endCalendar
 
         var weekLabels = weekCounts.map { String($0) }
         for (index, week) in weekCounts.enumerated() {
@@ -259,7 +259,9 @@ class LabelsModel {
                 event.title = "\(event.title!) V#"
                 if labelDayCount == 0 { event.calendar = labelCalendars["Marieke blokkeren"] }
             }
-            localLabels.append(event)
+            if datum < endWeeklyCalendar || event.title.contains("#") {
+                localLabels.append(event)
+            }
             datum = calendar.date(byAdding: DateComponents(day: 1), to: datum)!
         }
         return localLabels
