@@ -14,23 +14,24 @@ class LabelsModel {
     let startCalendar: Date
     var endCalendar: Date
     var endWeeklyCalendar: Date
+
     var labelCalendars = [String: EKCalendar]()
     let eventStore = EKEventStore()
     let calendar = Calendar.current
-    let dateFormatter = DateFormatter()
+    let df = DateFormatter()
     let defaults = UserDefaults.standard
 
     init() {
         let monday = DateComponents(hour: 0, minute: 0, second: 0, weekday: 2)
         startCalendar = calendar.nextDate(after: Date(), matching: monday, matchingPolicy: .nextTime, direction: .backward)!
-        let dayComp = DateComponents(day: 7)
+        let dayComp = DateComponents(day: 7 * labelNumbers["nrOfWeeks"]!)
         endCalendar = calendar.date(byAdding: dayComp, to: startCalendar)!
         endWeeklyCalendar = endCalendar
 
         let calendars = eventStore.calendars(for: .event).filter { $0.title.contains("Marieke") }
         for calendar in calendars { labelCalendars[calendar.title] = calendar }
 
-        dateFormatter.dateFormat = "d/M/yyyy"
+        df.dateFormat = "d/M/yyyy"
 
         if defaults.object(forKey: "today") == nil {
             defaults.set(Date(), forKey: "today")
@@ -83,7 +84,7 @@ class LabelsModel {
 
         if !calendar.isDateInToday(defaults.object(forKey: "today") as! Date) {
             showNotification(nieuwe: newSessions.count, voorstellen: proposedSessions.count/2, verwijderd: verwijderd/2)
-            sendMail(nieuwe: newSessions.count, voorstellen: proposedSessions.count/2, verwijderd: verwijderd/2)
+            // sendMail(nieuwe: newSessions.count, voorstellen: proposedSessions.count/2, verwijderd: verwijderd/2)
             defaults.set(Date(), forKey: "today")
         }
     }
@@ -92,8 +93,15 @@ class LabelsModel {
         var localSessions = [EKEvent]()
         for session in sessions {
             if let location = session.location {
+                var validDate: Date?
                 let year = calendar.dateComponents([.year], from: session.creationDate!).year!
-                if let date = dateFormatter.date(from: location + "/\(year)") {
+                let potentialDate = location.components(separatedBy: ",")[0]
+                if let date = df.date(from: potentialDate) {
+                    validDate = date
+                } else if let date = df.date(from: location + "/\(year)") {
+                    validDate = date
+                }
+                if let date = validDate {
                     let numberOfDays = Calendar.current.dateComponents([.day], from: date, to: Date()).day!
                     if numberOfDays > 7 {
                         session.calendar = labelCalendars["Marieke blokkeren"]
