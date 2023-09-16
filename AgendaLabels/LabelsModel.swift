@@ -63,7 +63,7 @@ class LabelsModel {
             let toMoveSessions = moveExpiredSessions(sessions: proposedSessions)
             verwijderd = toMoveSessions.count
             for event in toMoveSessions {
-                print(event)
+                print("removing: \(event)")
                 try? eventStore.save(event, span: .thisEvent)
             }
             try? eventStore.commit()
@@ -92,22 +92,13 @@ class LabelsModel {
     func moveExpiredSessions(sessions: [EKEvent]) -> [EKEvent] {
         var localSessions = [EKEvent]()
         for session in sessions {
-            if let location = session.location {
-                var validDate: Date?
-                let year = calendar.dateComponents([.year], from: session.creationDate!).year!
-                let potentialDate = location.components(separatedBy: ",")[0]
-                if let date = df.date(from: potentialDate) {
-                    validDate = date
-                } else if let date = df.date(from: location + "/\(year)") {
-                    validDate = date
-                }
-                if let date = validDate {
-                    let numberOfDays = Calendar.current.dateComponents([.day], from: date, to: Date()).day!
-                    if numberOfDays > 7 {
-                        session.calendar = labelCalendars["Marieke blokkeren"]
-                        localSessions.append(session)
-                    }
-                }
+            let item = eventStore.event(withIdentifier: session.eventIdentifier)
+            let gemaakt = calendar.startOfDay(for: (item?.creationDate)!)
+
+            let numberOfDays = Calendar.current.dateComponents([.day], from: gemaakt, to: Date()).day!
+            if numberOfDays > 7 {
+                session.calendar = labelCalendars["Marieke blokkeren"]
+                localSessions.append(session)
             }
         }
         return localSessions
