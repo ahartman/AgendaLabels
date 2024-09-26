@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>AppleScript uitvoeren</string>
 	<key>com.apple.security.app-sandbox</key>
 	<string>false</string>
 	<key>LSApplicationQueriesSchemes</key>
@@ -32,8 +30,8 @@
 	<true/>
 	<key>NSCalendarsUsageDescription</key>
 	<string>To access your calendars.</string>
-	<key>NSContactsUsageDescription</key>
-	<string>To access contacts.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>To access calendars</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
