@@ -81,7 +81,7 @@ class LabelsModel {
                 .filter { !$0.isAllDay }
                 .filter {
                     let temp = $0.location ?? ""
-                    return !["afgezegd", "niet gekomen"].contains(temp.lowercased())
+                    return !["afgezegd", "niet gekomen","ier","aar"].contains(temp.lowercased())
                 }
             let toMoveSessions = moveExpiredSessions(sessions: findSessions)
             for event in toMoveSessions {
