@@ -13,7 +13,7 @@ class LabelsModel {
         "nrPerWeek": 25,
         "nrPerDay": 6,
         "minimumPerWeek": 5,
-        "expiryDays": 7
+        "expiryDays": 7,
     ]
 
     let startCalendar: Date
@@ -71,18 +71,30 @@ class LabelsModel {
         if labelCalendars.count == 0 { print("Geen agenda's") }
 
         // handle expired first
-        if !calendar.isDateInToday(defaults.object(forKey: "labelsToday") as! Date) {
+        if !calendar.isDateInToday(
+            defaults.object(forKey: "labelsToday") as! Date)
+        {
             let findSessionsPredicate = eventStore.predicateForEvents(
                 withStart: startCalendar,
                 end: endCalendar,
                 calendars: [labelCalendars["Marieke speciallekes"]!]
             )
-            let findSessions = eventStore.events(matching: findSessionsPredicate)
-                .filter { !$0.isAllDay }
-                .filter {
-                    let temp = $0.location ?? ""
-                    return !["afgezegd", "niet gekomen","hier","daar"].contains(temp.lowercased())
+            let findSessions = eventStore.events(
+                matching: findSessionsPredicate
+            )
+            .filter { !$0.isAllDay }
+            .filter {
+                let temp = $0.location ?? ""
+                //return !["afgezegd", "niet gekomen","hier","daar"].contains(temp.lowercased())
+                if ["afgezegd", "niet gekomen", "hier", "daar"].contains(
+                    temp.lowercased())
+                    || ["geen patiënten"].contains($0.title.lowercased())
+                {
+                    return false
+                } else {
+                    return true
                 }
+            }
             let toMoveSessions = moveExpiredSessions(sessions: findSessions)
             for event in toMoveSessions {
                 try? eventStore.save(event, span: .thisEvent)
@@ -90,10 +102,16 @@ class LabelsModel {
             defaults.set(Date(), forKey: "labelsToday")
         }
 
-        let (sessions, newSessions, proposedSessions, oldLabels, oldSessions) = getLabelEvents()
-        let weekLabels = doWeekLabels(sessions: sessions, newSessions: newSessions, proposedSessions: proposedSessions)
-        let newLabels = doWeekProposedLabels(newSessions: newSessions, proposedSessions: proposedSessions)
-        let dayLabels = doDayLabels(sessions: sessions, newSessions: newSessions, proposedSessions: proposedSessions)
+        let (sessions, newSessions, proposedSessions, oldLabels, oldSessions) =
+            getLabelEvents()
+        let weekLabels = doWeekLabels(
+            sessions: sessions, newSessions: newSessions,
+            proposedSessions: proposedSessions)
+        let newLabels = doWeekProposedLabels(
+            newSessions: newSessions, proposedSessions: proposedSessions)
+        let dayLabels = doDayLabels(
+            sessions: sessions, newSessions: newSessions,
+            proposedSessions: proposedSessions)
         let moveNewSessions = moveNewSessions(sessions: newSessions)
 
         for event in oldLabels + oldSessions {
@@ -111,7 +129,9 @@ class LabelsModel {
             let item = eventStore.event(withIdentifier: session.eventIdentifier)
             let gemaakt = calendar.startOfDay(for: (item?.creationDate)!)
 
-            let numberOfDays = Calendar.current.dateComponents([.day], from: gemaakt, to: Date()).day!
+            let numberOfDays = Calendar.current.dateComponents(
+                [.day], from: gemaakt, to: Date()
+            ).day!
             if numberOfDays > labelNumbers["expiryDays"]! {
                 session.calendar = labelCalendars["Marieke blokkeren"]
                 session.location = "niet tijdig gereageerd"
@@ -122,47 +142,83 @@ class LabelsModel {
     }
 
     func moveNewSessions(sessions: [EKEvent]) -> [EKEvent] {
-        let date = calendar.nextDate(after: Date(), matching: monday, matchingPolicy: .nextTime, direction: .backward)!
+        let date = calendar.nextDate(
+            after: Date(), matching: monday, matchingPolicy: .nextTime,
+            direction: .backward)!
         let newSessions = sessions.map {
-            $0.calendar = $0.startDate < date ? labelCalendars["Marieke"] : labelCalendars["Marieke nieuwe"]
+            $0.calendar =
+                $0.startDate < date
+                ? labelCalendars["Marieke"] : labelCalendars["Marieke nieuwe"]
             return $0
         }
         return newSessions
     }
 
-    func getLabelEvents() -> ([EKEvent], [EKEvent], [EKEvent], [EKEvent], [EKEvent]) {
-        let oldLabelsStartDate = calendar.date(byAdding: DateComponents(day: -7), to: startCalendar)!
-        let oldLabelsPredicate = eventStore.predicateForEvents(withStart: oldLabelsStartDate, end: endCalendar, calendars: [labelCalendars["Marieke"]!, labelCalendars["Marieke blokkeren"]!, labelCalendars["Marieke speciallekes"]!, labelCalendars["Marieke nieuwe"]!])
-        let oldLabels = eventStore.events(matching: oldLabelsPredicate).filter { $0.isAllDay == true }
+    func getLabelEvents() -> (
+        [EKEvent], [EKEvent], [EKEvent], [EKEvent], [EKEvent]
+    ) {
+        let oldLabelsStartDate = calendar.date(
+            byAdding: DateComponents(day: -7), to: startCalendar)!
+        let oldLabelsPredicate = eventStore.predicateForEvents(
+            withStart: oldLabelsStartDate, end: endCalendar,
+            calendars: [
+                labelCalendars["Marieke"]!,
+                labelCalendars["Marieke blokkeren"]!,
+                labelCalendars["Marieke speciallekes"]!,
+                labelCalendars["Marieke nieuwe"]!,
+            ])
+        let oldLabels = eventStore.events(matching: oldLabelsPredicate).filter {
+            $0.isAllDay == true
+        }
 
-        let sessionsPredicate = eventStore.predicateForEvents(withStart: startCalendar, end: endCalendar, calendars: [labelCalendars["Marieke"]!, labelCalendars["Marieke nieuwe"]!])
-        let sessions = eventStore.events(matching: sessionsPredicate).filter { $0.isAllDay == false }
+        let sessionsPredicate = eventStore.predicateForEvents(
+            withStart: startCalendar, end: endCalendar,
+            calendars: [
+                labelCalendars["Marieke"]!, labelCalendars["Marieke nieuwe"]!,
+            ])
+        let sessions = eventStore.events(matching: sessionsPredicate).filter {
+            $0.isAllDay == false
+        }
 
-        let newSessionsPredicate = eventStore.predicateForEvents(withStart: startCalendar, end: endCalendar, calendars: [labelCalendars["Marieke"]!, labelCalendars["Marieke nieuwe"]!])
-        let newSessions = eventStore.events(matching: newSessionsPredicate).filter { $0.isAllDay == false && $0.title.contains("#") }
+        let newSessionsPredicate = eventStore.predicateForEvents(
+            withStart: startCalendar, end: endCalendar,
+            calendars: [
+                labelCalendars["Marieke"]!, labelCalendars["Marieke nieuwe"]!,
+            ])
+        let newSessions = eventStore.events(matching: newSessionsPredicate)
+            .filter { $0.isAllDay == false && $0.title.contains("#") }
 
-        let proposedSessionsPredicate = eventStore.predicateForEvents(withStart: startCalendar, end: endCalendar, calendars: [labelCalendars["Marieke speciallekes"]!])
-        let proposedSessions = eventStore.events(matching: proposedSessionsPredicate).filter {
+        let proposedSessionsPredicate = eventStore.predicateForEvents(
+            withStart: startCalendar, end: endCalendar,
+            calendars: [labelCalendars["Marieke speciallekes"]!])
+        let proposedSessions = eventStore.events(
+            matching: proposedSessionsPredicate
+        ).filter {
             let temp = $0.location ?? ""
             return
-                !["afgezegd"].contains(temp.lowercased()) &&
-                $0.isAllDay == false &&
-                $0.title.contains("#")
+                !["afgezegd"].contains(temp.lowercased())
+                && $0.isAllDay == false && $0.title.contains("#")
         }
- 
-        let oldSessionsPredicate = eventStore.predicateForEvents(withStart: startCalendar, end: Date(), calendars: [labelCalendars["Marieke speciallekes"]!, labelCalendars["Marieke blokkeren"]!])
+
+        let oldSessionsPredicate = eventStore.predicateForEvents(
+            withStart: startCalendar, end: Date(),
+            calendars: [
+                labelCalendars["Marieke speciallekes"]!,
+                labelCalendars["Marieke blokkeren"]!,
+            ])
         let oldSessions = eventStore.events(matching: oldSessionsPredicate)
             .filter {
                 let temp = $0.location ?? ""
                 return
-                    !["afgezegd", "niet gekomen"].contains(temp.lowercased()) &&
-                    $0.isAllDay == false &&
-                    $0.title.contains("#")
+                    !["afgezegd", "niet gekomen"].contains(temp.lowercased())
+                    && $0.isAllDay == false && $0.title.contains("#")
             }
         return (sessions, newSessions, proposedSessions, oldLabels, oldSessions)
     }
 
-    func doWeekLabels(sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent] {
+    func doWeekLabels(
+        sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]
+    ) -> [EKEvent] {
         var datum = startCalendar
         var localLabels = [EKEvent]()
 
@@ -173,25 +229,34 @@ class LabelsModel {
 
         while datum < endCalendar {
             let datumWeek = calendar.component(.weekOfYear, from: datum)
-            weekCounts.append(sessions.filter {
-                let labelWeek = calendar.component(.weekOfYear, from: $0.startDate)
-                return datumWeek == labelWeek
-            }.count)
-            weekNewCounts.append(newSessions.filter {
-                let labelWeek = calendar.component(.weekOfYear, from: $0.startDate)
-                return datumWeek == labelWeek && $0.title.contains("#")
-            }.count)
-            weekProposalsCounts.append(proposedSessions.filter {
-                let labelWeek = calendar.component(.weekOfYear, from: $0.startDate)
-                return datumWeek == labelWeek && $0.title.contains("#")
-            }.count)
+            weekCounts.append(
+                sessions.filter {
+                    let labelWeek = calendar.component(
+                        .weekOfYear, from: $0.startDate)
+                    return datumWeek == labelWeek
+                }.count)
+            weekNewCounts.append(
+                newSessions.filter {
+                    let labelWeek = calendar.component(
+                        .weekOfYear, from: $0.startDate)
+                    return datumWeek == labelWeek && $0.title.contains("#")
+                }.count)
+            weekProposalsCounts.append(
+                proposedSessions.filter {
+                    let labelWeek = calendar.component(
+                        .weekOfYear, from: $0.startDate)
+                    return datumWeek == labelWeek && $0.title.contains("#")
+                }.count)
             weekDates.append(datum)
             datum = calendar.date(byAdding: DateComponents(day: 7), to: datum)!
         }
 
-        let lastIndex = weekCounts.lastIndex(where: { $0 > labelNumbers["minimumPerWeek"]! })
+        let lastIndex = weekCounts.lastIndex(where: {
+            $0 > labelNumbers["minimumPerWeek"]!
+        })
         weekCounts = Array(weekCounts[...lastIndex!])
-        endCalendar = calendar.date(byAdding: DateComponents(day: 7), to: weekDates[lastIndex!])!
+        endCalendar = calendar.date(
+            byAdding: DateComponents(day: 7), to: weekDates[lastIndex!])!
         endWeeklyCalendar = endCalendar
 
         var weekLabels = weekCounts.map { String($0) }
@@ -199,7 +264,8 @@ class LabelsModel {
             let event = EKEvent(eventStore: eventStore)
             event.isAllDay = true
             event.startDate = weekDates[index]
-            event.endDate = calendar.date(byAdding: DateComponents(day: 6), to: event.startDate)!
+            event.endDate = calendar.date(
+                byAdding: DateComponents(day: 6), to: event.startDate)!
             event.title = "Week \(weekLabels.joined(separator: ", "))"
             if week > labelNumbers["nrPerWeek"]! {
                 event.calendar = labelCalendars["Marieke"]
@@ -212,17 +278,23 @@ class LabelsModel {
         return localLabels
     }
 
-    func doDayLabels(sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent] {
+    func doDayLabels(
+        sessions: [EKEvent], newSessions: [EKEvent], proposedSessions: [EKEvent]
+    ) -> [EKEvent] {
         var datum = startCalendar
         var localLabels = [EKEvent]()
 
         while datum <= endCalendar {
-            let labelDayCount = sessions.filter { calendar.isDate(datum, inSameDayAs: $0.startDate) }.count
+            let labelDayCount = sessions.filter {
+                calendar.isDate(datum, inSameDayAs: $0.startDate)
+            }.count
             let labelDayNewCount = newSessions.filter {
-                calendar.isDate(datum, inSameDayAs: $0.startDate) && $0.title.contains("#")
+                calendar.isDate(datum, inSameDayAs: $0.startDate)
+                    && $0.title.contains("#")
             }.count
             let labelDayProposedcount = proposedSessions.filter {
-                calendar.isDate(datum, inSameDayAs: $0.startDate) && $0.title.contains("#")
+                calendar.isDate(datum, inSameDayAs: $0.startDate)
+                    && $0.title.contains("#")
             }.count
 
             let event = EKEvent(eventStore: eventStore)
@@ -238,12 +310,18 @@ class LabelsModel {
             }
             if labelDayNewCount > 0 {
                 event.title = "\(event.title!) N#"
-                if labelDayCount == 0 { event.calendar = labelCalendars["Marieke blokkeren"] }
+                if labelDayCount == 0 {
+                    event.calendar = labelCalendars["Marieke blokkeren"]
+                }
             } else if labelDayProposedcount > 0 {
                 event.title = "\(event.title!) V#"
-                if labelDayCount == 0 { event.calendar = labelCalendars["Marieke blokkeren"] }
+                if labelDayCount == 0 {
+                    event.calendar = labelCalendars["Marieke blokkeren"]
+                }
             }
-            if datum < endWeeklyCalendar || event.title.contains("#"), event.title != "" {
+            if datum < endWeeklyCalendar || event.title.contains("#"),
+                event.title != ""
+            {
                 localLabels.append(event)
             }
             datum = calendar.date(byAdding: DateComponents(day: 1), to: datum)!
@@ -251,7 +329,7 @@ class LabelsModel {
 
         // check sync event
         let event = EKEvent(eventStore: eventStore)
-        df.dateFormat = "ccc, HH:mm"
+        df.dateFormat = "HH:mm"
         let tijd = Date.now
         event.title = df.string(from: tijd).capitalized
         event.calendar = labelCalendars["Marieke blokkeren"]
@@ -263,7 +341,9 @@ class LabelsModel {
         return localLabels
     }
 
-    func doWeekProposedLabels(newSessions: [EKEvent], proposedSessions: [EKEvent]) -> [EKEvent] {
+    func doWeekProposedLabels(
+        newSessions: [EKEvent], proposedSessions: [EKEvent]
+    ) -> [EKEvent] {
         var datum = startCalendar
         var localLabels = [EKEvent]()
         var weekNewCounts = [Int]()
@@ -272,18 +352,23 @@ class LabelsModel {
 
         endCalendar = max(
             newSessions.count > 0 ? newSessions.last!.startDate : Date(),
-            proposedSessions.count > 0 ? proposedSessions.last!.startDate : Date()
+            proposedSessions.count > 0
+                ? proposedSessions.last!.startDate : Date()
         )
         while datum < endCalendar {
             let datumWeek = calendar.component(.weekOfYear, from: datum)
-            weekNewCounts.append(newSessions.filter {
-                let labelWeek = calendar.component(.weekOfYear, from: $0.startDate)
-                return datumWeek == labelWeek && $0.title.contains("#")
-            }.count)
-            weekProposalsCounts.append(proposedSessions.filter {
-                let labelWeek = calendar.component(.weekOfYear, from: $0.startDate)
-                return datumWeek == labelWeek && $0.title.contains("#")
-            }.count)
+            weekNewCounts.append(
+                newSessions.filter {
+                    let labelWeek = calendar.component(
+                        .weekOfYear, from: $0.startDate)
+                    return datumWeek == labelWeek && $0.title.contains("#")
+                }.count)
+            weekProposalsCounts.append(
+                proposedSessions.filter {
+                    let labelWeek = calendar.component(
+                        .weekOfYear, from: $0.startDate)
+                    return datumWeek == labelWeek && $0.title.contains("#")
+                }.count)
             weekDates.append(datum)
             datum = calendar.date(byAdding: DateComponents(day: 7), to: datum)!
         }
@@ -295,15 +380,18 @@ class LabelsModel {
             let event = EKEvent(eventStore: eventStore)
             event.isAllDay = true
             event.startDate = weekDates[index]
-            event.endDate = calendar.date(byAdding: DateComponents(day: 6), to: event.startDate)!
-            event.title = "Nieuwe: \(weekNewLabels[index]), voorstellen: \(weekProposalsLabels[index])"
+            event.endDate = calendar.date(
+                byAdding: DateComponents(day: 6), to: event.startDate)!
+            event.title =
+                "Nieuwe: \(weekNewLabels[index]), voorstellen: \(weekProposalsLabels[index])"
             event.calendar = labelCalendars["Marieke nieuwe"]
             localLabels.append(event)
         }
         return localLabels
     }
 
-    func requestEventStoreAuthorization() async throws -> EKAuthorizationStatus {
+    func requestEventStoreAuthorization() async throws -> EKAuthorizationStatus
+    {
         if try await eventStore.requestAccess(to: .event) {
             return EKEventStore.authorizationStatus(for: .event)
         } else {
@@ -320,7 +408,8 @@ class LabelsModel {
             case .unableToAccessCalendar: return "Unable to access celendar"
             case let .eventAuthorizationStatus(status):
                 if let status = status {
-                    return "Failed to authorize event permisssion, status: \(status)"
+                    return
+                        "Failed to authorize event permisssion, status: \(status)"
                 } else {
                     return "Failed to authorize event permission"
                 }
