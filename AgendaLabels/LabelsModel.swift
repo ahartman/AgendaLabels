@@ -85,9 +85,9 @@ class LabelsModel {
             .filter { !$0.isAllDay }
             .filter {
                 let temp = $0.location ?? ""
-                //return !["afgezegd", "niet gekomen","hier","daar"].contains(temp.lowercased())
-                if ["afgezegd", "niet gekomen", "hier", "daar"].contains(
-                    temp.lowercased())
+                if ["afgezegd", "verplaatst", "niet gekomen", "hier", "daar"]
+                    .contains(
+                        temp.lowercased())
                     || ["geen patiënten"].contains($0.title.lowercased())
                 {
                     return false
