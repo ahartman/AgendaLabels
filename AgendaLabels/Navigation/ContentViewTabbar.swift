@@ -19,9 +19,3 @@ struct ContentViewTabbar: View {
         }
     }
 }
-
-struct ContentViewTabbar_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
-}

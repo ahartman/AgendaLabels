@@ -21,9 +21,3 @@ struct ContentViewSidebar: View {
         }
     }
 }
-
-struct ContentViewSidebar_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentViewSidebar()
-    }
-}

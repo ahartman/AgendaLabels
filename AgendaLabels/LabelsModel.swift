@@ -46,23 +46,15 @@ class LabelsModel {
     }
 
     func doLabels() async {
-        let permit = Task {
-            let eventStore = EKEventStore()
-            guard try await eventStore.requestAccess(to: .event) else {
-                print("calendar access probleem")
-                return false
-            }
-            return true
-        }
-        do {
-            _ = try await permit.value
-        } catch {
-            print("problem")
+        let granted = await requestAccess()
+        guard granted else {
+            print("calendar access denied")
+            exit(1)
         }
         doLabels1()
     }
 
-    public func doLabels1() {
+    private func doLabels1() {
         let calendars = eventStore.calendars(for: .event)
             .filter { $0.title.contains("Marieke") }
         for calendar in calendars {
@@ -390,29 +382,16 @@ class LabelsModel {
         return localLabels
     }
 
-    func requestEventStoreAuthorization() async throws -> EKAuthorizationStatus
-    {
-        if try await eventStore.requestAccess(to: .event) {
-            return EKEventStore.authorizationStatus(for: .event)
-        } else {
-            throw EventError.unableToAccessCalendar
-        }
-    }
-
-    enum EventError: Error, LocalizedError {
-        case unableToAccessCalendar
-        case eventAuthorizationStatus(EKAuthorizationStatus? = nil)
-
-        var localizedDescription: String {
-            switch self {
-            case .unableToAccessCalendar: return "Unable to access celendar"
-            case let .eventAuthorizationStatus(status):
-                if let status = status {
-                    return
-                        "Failed to authorize event permisssion, status: \(status)"
-                } else {
-                    return "Failed to authorize event permission"
+    func requestAccess() async -> Bool {
+        return await withCheckedContinuation { continuation in
+            eventStore.requestFullAccessToEvents { granted, error in
+                if let error = error {
+                    print(
+                        "Error requesting access: \(error.localizedDescription)"
+                    )
+                    continuation.resume(returning: false)
                 }
+                continuation.resume(returning: granted)
             }
         }
     }
