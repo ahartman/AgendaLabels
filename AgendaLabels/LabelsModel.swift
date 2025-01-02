@@ -126,7 +126,7 @@ class LabelsModel {
             ).day!
             if numberOfDays > labelNumbers["expiryDays"]! {
                 session.calendar = labelCalendars["Marieke blokkeren"]
-                session.location = "niet tijdig gereageerd"
+                session.location = "niet gereageerd"
                 localSessions.append(session)
             }
         }
