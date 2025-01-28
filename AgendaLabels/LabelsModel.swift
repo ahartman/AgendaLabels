@@ -62,32 +62,33 @@ class LabelsModel {
         }
         if labelCalendars.count == 0 { print("Geen agenda's") }
 
-        // handle expired first
-        if !calendar.isDateInToday(
+       // handle expired first
+        if calendar.isDateInToday(
             defaults.object(forKey: "labelsToday") as! Date)
         {
-            let findSessionsPredicate = eventStore.predicateForEvents(
+            let findPredicate = eventStore.predicateForEvents(
                 withStart: startCalendar,
                 end: endCalendar,
                 calendars: [labelCalendars["Marieke speciallekes"]!]
             )
-            let findSessions = eventStore.events(
-                matching: findSessionsPredicate
+            let foundSessions = eventStore.events(
+                matching: findPredicate
             )
             .filter { !$0.isAllDay }
+            .filter { !$0.title.lowercased().contains("geen patiënten") }
             .filter {
-                let temp = $0.location ?? ""
-                if ["afgezegd", "verplaatst", "niet gekomen", "hier", "daar"]
-                    .contains(
-                        temp.lowercased())
-                    || ["geen patiënten"].contains($0.title.lowercased())
+                let temp = ($0.location ?? "").lowercased()
+                if temp.contains("afgezegd") || temp.contains("verplaatst")
+                    || temp.contains("niet gekomen") || temp.contains("hier")
+                    || temp.contains("daar")
                 {
                     return false
                 } else {
                     return true
                 }
             }
-            let toMoveSessions = moveExpiredSessions(sessions: findSessions)
+
+            let toMoveSessions = moveExpiredSessions(sessions: foundSessions)
             for event in toMoveSessions {
                 try? eventStore.save(event, span: .thisEvent)
             }
